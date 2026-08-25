@@ -13,6 +13,7 @@
     "forceConsistentCasingInFileNames": true,
     "lib": ["esnext", "esnext.asynciterable"],
     "resolveJsonModule": true,
+    "skipLibCheck": true,
     "strict": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true

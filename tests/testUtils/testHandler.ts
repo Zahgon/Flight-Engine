@@ -1,45 +1,46 @@
-import express, { Express, RequestHandler } from 'express';
+import type { IncomingMessage, ServerResponse } from 'http';
+import Fastify, { FastifyInstance, FastifyPluginCallback } from 'fastify';
 import supertest from 'supertest';
-import type { ParamsDictionary } from 'express-serve-static-core';
-import type { ParsedQs } from 'qs';
 
-type TestRequestHandler = RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>;
+type TestPlugin = FastifyPluginCallback;
 
 interface CreateTestApp {
-  (...handlers: TestRequestHandler[]): Express;
-  (mappings: Record<string, TestRequestHandler>): Express;
+  (...plugins: TestPlugin[]): FastifyInstance;
+  (mappings: Record<string, TestPlugin>): FastifyInstance;
 }
 
-export const createTestApp: CreateTestApp = (
-  mappingsOrFirstHandler: Record<string, TestRequestHandler> | TestRequestHandler,
-  ...restOfHandlers: TestRequestHandler[]
-) => {
-  const app = express();
+export const createTestApp: CreateTestApp = (mappingsOrFirstPlugin: Record<string, TestPlugin> | TestPlugin, ...restOfPlugins: TestPlugin[]) => {
+  const app = Fastify();
 
-  if (typeof mappingsOrFirstHandler === 'object') {
-    const mappings = mappingsOrFirstHandler;
+  if (typeof mappingsOrFirstPlugin === 'object') {
+    const mappings = mappingsOrFirstPlugin;
 
-    for (const [path, handler] of Object.entries(mappings)) {
-      app.use(path, handler);
+    for (const [path, plugin] of Object.entries(mappings)) {
+      app.register(plugin, { prefix: path });
     }
   } else {
-    const handlers = [mappingsOrFirstHandler, ...restOfHandlers];
+    const plugins = [mappingsOrFirstPlugin, ...restOfPlugins];
 
-    app.use(handlers);
+    for (const plugin of plugins) {
+      app.register(plugin);
+    }
   }
 
   return app;
 };
 
+const isFastifyApp = (value: TestPlugin | FastifyInstance): value is FastifyInstance => typeof (value as FastifyInstance).ready === 'function';
+
 interface TestHandler {
-  (handler: TestRequestHandler): supertest.SuperTest<supertest.Test>;
-  (testApp: Express): supertest.SuperTest<supertest.Test>;
+  (plugin: TestPlugin): supertest.SuperTest<supertest.Test>;
+  (testApp: FastifyInstance): supertest.SuperTest<supertest.Test>;
 }
 
-export const testHandler: TestHandler = (handler: TestRequestHandler | Express) => {
-  if (handler.name === 'router') {
-    return supertest(createTestApp(handler));
-  }
+export const testHandler: TestHandler = (pluginOrApp: TestPlugin | FastifyInstance) => {
+  const app = isFastifyApp(pluginOrApp) ? pluginOrApp : createTestApp(pluginOrApp);
 
-  return supertest(handler);
+  return supertest(async (req: IncomingMessage, res: ServerResponse) => {
+    await app.ready();
+    app.server.emit('request', req, res);
+  });
 };

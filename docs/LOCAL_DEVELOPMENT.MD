@@ -20,28 +20,32 @@ You can customize Flight Engine to tweak existing routes, add data, or even add 
 
 ### Adding a new Route
 
-If you want to create a new API route, use the `app` variable defined within/exported from `src/app.ts` and follow the documentation for [Express.js](https://github.com/expressjs/express) to create a new listener. For example, you could create the `/theMeaningOfLife` endpoint by adding the following code to `src/app.ts` (at the bottom but above `export default app;`):
+If you want to create a new API route, use the `app` variable defined within `src/index.ts` and follow the documentation for [Fastify](https://fastify.dev/docs/v4.28.x/) to create a new route. For example, you could create the `/theMeaningOfLife` endpoint by adding the following code to `src/index.ts` (above the `app.listen` call):
 
 ```typescript
-app.get('/theMeaningOfLife', (_: express.Request, res: express.Response): void => {
-  res.send('42');
+app.get('/theMeaningOfLife', (_request, reply) => {
+  void reply.send('42');
 });
 ```
 
-You could also create a new file and consume that route from within `src/app.ts`:
+You could also create a new file that exports a Fastify plugin and register that route from within `src/index.ts`:
 
 ```typescript
 // src/theMeaningOfLife.ts
-import express from 'express';
+import { FastifyPluginCallback } from 'fastify';
 
-export default function theMeaningOfLife(_: express.Request, res: express.Response): void {
-  res.send('42');
-}
+export const theMeaningOfLife: FastifyPluginCallback = (fastify, _opts, done) => {
+  fastify.get('/', (_request, reply) => {
+    void reply.send('42');
+  });
 
-// src/app.ts
-import theMeaningOfLife from './theMeaningOfLife';
+  done();
+};
+
+// src/index.ts
+import { theMeaningOfLife } from './theMeaningOfLife';
 // ...
-app.use('/theMeaningOfLife', theMeaningOfLife);
+void app.register(theMeaningOfLife, { prefix: '/theMeaningOfLife' });
 ```
 
 ### Randomization via a Seed Value

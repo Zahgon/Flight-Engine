@@ -3,5 +3,5 @@
   "description": "Mock flight data delivered simply and quickly without a database",
   "repository": "https://github.com/AmericanAirlines/Flight-Engine",
   "logo": "https://avatars2.githubusercontent.com/u/28813424?s=200&v=4",
-  "keywords": ["node", "express", "typescript", "jest", "American Airlines", "flight data"]
+  "keywords": ["node", "fastify", "typescript", "jest", "American Airlines", "flight data"]
 }

@@ -1,6 +1,6 @@
 /* istanbul ignore file */
-import express from 'express';
-import cors from 'cors';
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { env } from './env';
 import { logger } from './logger';
 import { flights } from './api/flights';
@@ -8,19 +8,22 @@ import { airportRouter } from './api/airports';
 
 const port = env.port || '4000';
 
-const app = express();
+const app = Fastify();
 
-app.use(cors());
-app.use(express.json());
+void app.register(cors, { strictPreflight: false });
 
-app.get('/', (_: express.Request, res: express.Response) => {
-  res.send('👋');
+app.get('/', (_request, reply) => {
+  void reply.send('👋');
 });
 
-app.use('/flights', flights);
+void app.register(flights, { prefix: '/flights' });
 
-app.use('/airports', airportRouter);
+void app.register(airportRouter, { prefix: '/airports' });
 
-app.listen(port, () => {
+app.listen({ port: Number(port), host: '0.0.0.0' }, (err) => {
+  if (err) {
+    logger.error(err);
+    process.exit(1);
+  }
   logger.notice(`🚀 Listening at http://localhost:${port}`);
 });

@@ -1,29 +1,31 @@
-import { Router } from 'express';
+import { FastifyPluginCallback } from 'fastify';
 import { airports } from '../data/airports';
-
-export const airportRouter = Router();
 
 function validAirportRegex(code: string) {
   const matchedCodes = code.match(/^[A-Z]{3}$/gi);
   return matchedCodes?.[0] === code;
 }
 
-airportRouter.get('/', (req, res) => {
-  const { code } = req.query;
-  if (!code || !validAirportRegex(code.toString())) {
-    res.status(400).send('Please enter a valid flight code i.e. DFW, GSO, ATL...');
-    return;
-  }
+export const airportRouter: FastifyPluginCallback = (fastify, _opts, done) => {
+  fastify.get('/', (request, reply) => {
+    const { code } = request.query as { code?: string };
+    if (!code || !validAirportRegex(code.toString())) {
+      void reply.status(400).send('Please enter a valid flight code i.e. DFW, GSO, ATL...');
+      return;
+    }
 
-  const airport = airports.find((port) => port.code.toLowerCase() === code.toString().toLowerCase());
+    const airport = airports.find((port) => port.code.toLowerCase() === code.toString().toLowerCase());
 
-  if (airport) {
-    res.json(airport);
-  } else {
-    res.status(404).send('Airport not found');
-  }
-});
+    if (airport) {
+      void reply.send(airport);
+    } else {
+      void reply.status(404).send('Airport not found');
+    }
+  });
 
-airportRouter.get('/all', (req, res) => {
-  res.json(airports);
-});
+  fastify.get('/all', (_request, reply) => {
+    void reply.send(airports);
+  });
+
+  done();
+};
